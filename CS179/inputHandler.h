@@ -11,6 +11,10 @@
 #include <fstream>
 #include <filesystem>
 #include <vector>
+#include <thread>
+#include <chrono>
+#include <functional>
+#include <mutex>
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
@@ -22,6 +26,8 @@
 using namespace std;
 using std::filesystem::directory_iterator;
 using namespace rapidjson;
+using namespace std::chrono;
+
 
 class InputHandler{
 public:
@@ -39,6 +45,18 @@ public:
     void updateDB(vector<Database*>*);
     void updateColl(vector<Database*>*);
     void searchQuery(vector<Database*>*);
+
+    void threadRead(vector<Database*>*);
+    void singleRead(vector<Database*>*, string);
+    void singleCollRead(vector<Database*>*, string, string);
+    void fillPaths();
+
+    vector<thread> DB_threads;
+    vector<thread> Coll_threads;
+    vector<string> DBPaths;
+    vector<string> CollPaths;
+    int pathCount = 0;
+
 };
 
 //displays main menu for user and returns chosen option 
@@ -51,8 +69,9 @@ int InputHandler::displayMenu()
 	cout << "2. Remove" << endl;
 	cout << "3. Update" << endl;
     cout << "4. Query" << endl;
-    cout << "5. Print" << endl;
-    cout << "6. Quit" << endl;
+    cout << "5. thread" << endl;
+    cout << "6. Print" << endl;
+    cout << "7. Quit" << endl;
     getline(cin, str);
     option = stoi(str);
 	return option;
@@ -194,6 +213,8 @@ void InputHandler::readData(vector<Database*>* DB){
     string path = "STORAGE\\";
     string DBname, collName;
     string path2, path3;
+
+    auto start1 = high_resolution_clock::now();    
     for (const auto & file : directory_iterator(path)){
         path2 = file.path().string(); // STORAGE\Database1
         DBname = path2.substr(path2.find("\\")+1, path2.length()-path2.find("\\"));
@@ -223,6 +244,9 @@ void InputHandler::readData(vector<Database*>* DB){
             }
         }
     }
+    auto stop = high_resolution_clock::now();
+    auto duration = duration_cast<microseconds>(stop - start1);
+    cout << "Time taken to search: "<< duration.count() << " microseconds" << endl;
 }
 
 void InputHandler::removeDB(vector<Database*>* DB){
@@ -364,6 +388,7 @@ void InputHandler::searchQuery(vector<Database*>* DB){
         count = d.MemberCount(); 
         Collection* coll = new Collection();
         coll = DB->at(stoi(DBchoose))->getCollection(stoi(collChoose));
+
         for (int i = 0; i < coll->getDocs().size(); i++){
             bool objAttFlag = false;
             matches = 0;     
@@ -617,4 +642,183 @@ void InputHandler::removeDoc(vector<Database*>* DB){
     // Writer<StringBuffer> writer(buffer);
     // this->collections.at(i)->getDocAt(j)->Accept(writer);
     // cout << "\t" << buffer.GetString() << endl;
+}
+
+
+
+/*threads functions so that we can read multiple databases/collections concurrently
+    dynamically create threads based on database size + collection size
+*/
+
+void InputHandler::threadRead(vector<Database*>* DB){
+    string path = "STORAGE\\";
+    int count = 0;
+    bool begin;
+    begin = DB->empty();
+    bool begin2 = DBPaths.empty();
+    //Dynamically creates 1 thread per DB
+
+    begin2 = true;
+    //cout << "DBpath size: " << DBPaths.size() << endl;
+    //cout << "DB size: " << DB->size() << endl;
+    if (begin == true){
+        auto start1 = high_resolution_clock::now();    
+        for (int i = 0; i<DBPaths.size(); i++)
+        {
+            //std::cout << DBPaths[i] << endl;
+            DB_threads.push_back(thread(&InputHandler::singleRead, this, cref(DB), ref(DBPaths[i])));
+            // if (begin2 == true){
+            // for (int i=0; i<CollPaths.size(); i++){
+            //     //std::cout << CollPaths[i]<<endl;
+            //     Coll_threads.push_back(thread(&InputHandler::singleCollRead, this, cref(DB), cref(DBPaths[i]), cref(CollPaths[i])));
+            //     count++;
+            // }
+            // }
+            // else if (begin2 == false){
+            //     count++;
+            //     //cout << "Colls Read" << endl;
+            // }
+        }
+        for (auto& t: DB_threads){
+            t.join();
+        }
+        // for(auto& th: Coll_threads){
+        //     th.join();
+        // }
+        auto stop = high_resolution_clock::now();
+        auto duration = duration_cast<microseconds>(stop - start1);
+        cout << "Time taken to read: "<< duration.count() << " microseconds" << endl;
+        begin = false;
+        begin2 = false;
+        }
+        else{
+        cout << "Already read" << endl;
+     }
+}
+
+
+void InputHandler::fillPaths(){
+    string path = "STORAGE\\";
+    string DBname, collName;
+    string path2, path3;
+    //Find DB
+    for (const auto & file : directory_iterator(path)){
+        path2 = file.path().string(); // STORAGE\'FirstDatabaseFound'
+        DBname = path2.substr(path2.find("\\") + 1, path2.length()-path2.find("\\"));
+
+        Database* databasePtr = new Database(DBname);
+        DBPaths.push_back(DBname);
+
+        for (const auto & file: directory_iterator(path2)){
+            path3 = file.path().string(); //STORAGE\Database1\sample1.json
+            string temp = path3.substr(path3.find("\\")+1, path3.length()-path3.find("\\")); 
+            collName = temp.substr(temp.find("\\")+1, temp.length()-temp.find("\\")); 
+            //Collection* collPtr = new Collection(collName, DB->back()->getPath());
+            //DB->back()->addColl(collPtr);
+            //string temp2 = collPtr->getPath();
+            CollPaths.push_back(collName);
+            // const char *jsonPath = temp2.c_str();
+            // Document* d = new Document();
+            // FILE* fp = fopen(jsonPath, "rb");
+            // char readBuffer[65536];
+            // FileReadStream is(fp, readBuffer, sizeof(readBuffer));
+            // d->ParseStream(is);
+            // fclose(fp);
+            
+            // for (rapidjson::Value::ConstValueIterator itr = d->Begin(); itr != d->End(); ++itr) {
+            //     const rapidjson::Value& attribute = *itr;
+            //     assert(attribute.IsObject()); // each attribute is an object
+            //     Document *t = new Document();
+            //     t->CopyFrom(attribute, t->GetAllocator());
+            //     collPtr->addDoc(t);
+            // }
+        }
+    }
+
+    // for (int i = 0;i<CollPaths.size(); i++)
+    // {
+    //     cout << CollPaths[i] << endl;
+    // }
+}
+
+
+//reads single Coll (to be used by thread)
+mutex mtx;
+void InputHandler::singleCollRead(vector<Database*>* DB, string DBpath, string Collpath){
+    lock_guard<mutex> lock(mtx);
+    string path = "STORAGE\\";
+    string DBname, collName;
+    string path2, path3;
+
+    path2 = path + DBpath; // STORAGE\DB1
+    DBname = path2.substr(path2.find("\\") + 1, path2.length()-path2.find("\\"));
+
+    //cout << "collread: " << DBname << endl;
+
+    path3 = path2 + Collpath; //STORAGE\Database1\sample1.json
+    string temp = path3.substr(path3.find("\\")+1, path3.length()-path3.find("\\")); 
+    //cout << "path3: " << path3 << endl;
+
+    collName = temp.substr(temp.find("\\")+1, temp.length()-temp.find("\\")); 
+    Collection* collPtr = new Collection(collName, DB->back()->getPath());
+    //cout << "Path3: " << path3 << endl;
+    DB->back()->addColl(collPtr);
+    string temp2 = collPtr->getPath();
+    const char *jsonPath = temp2.c_str();
+    Document* d = new Document();
+    FILE* fp = fopen(jsonPath, "rb");
+    char readBuffer[65536];
+    FileReadStream is(fp, readBuffer, sizeof(readBuffer));
+    d->ParseStream(is);
+    fclose(fp);
+
+    for (rapidjson::Value::ConstValueIterator itr = d->Begin(); itr != d->End(); ++itr) {
+    const rapidjson::Value& attribute = *itr;
+    assert(attribute.IsObject()); // each attribute is an object
+    Document *t = new Document();
+    t->CopyFrom(attribute, t->GetAllocator());
+    collPtr->addDoc(t);
+    }
+}
+
+
+mutex mtx2;
+void InputHandler::singleRead(vector<Database*>* DB, string pathname){
+    lock_guard<mutex> lock(mtx2);
+    string path = "STORAGE\\";
+    string DBname, collName, temp;
+    string path2, path3;
+
+    //Find DBs and read
+    path2 = path + pathname;
+    //cout << "name:" << path2 << endl;
+    DBname = path2.substr(path2.find("\\") + 1, path2.length()-path2.find("\\"));
+    Database* databasePtr = new Database(DBname);
+    DB->push_back(databasePtr);
+
+    //Find Colls and read
+    for (const auto & file: directory_iterator(path2)){
+    path3 = file.path().string(); //STORAGE\Database1\sample1.json
+    string temp = path3.substr(path3.find("\\")+1, path3.length()-path3.find("\\")); 
+    collName = temp.substr(temp.find("\\")+1, temp.length()-temp.find("\\")); 
+    Collection* collPtr = new Collection(collName, DB->back()->getPath());
+    //cout << "Path3: " << path3 << endl;
+    DB->back()->addColl(collPtr);
+    string temp2 = collPtr->getPath();
+    const char *jsonPath = temp2.c_str();
+    Document* d = new Document();
+    FILE* fp = fopen(jsonPath, "rb");
+    char readBuffer[65536];
+    FileReadStream is(fp, readBuffer, sizeof(readBuffer));
+    d->ParseStream(is);
+    fclose(fp);
+
+    for (rapidjson::Value::ConstValueIterator itr = d->Begin(); itr != d->End(); ++itr) {
+        const rapidjson::Value& attribute = *itr;
+        assert(attribute.IsObject()); // each attribute is an object
+        Document *t = new Document();
+        t->CopyFrom(attribute, t->GetAllocator());
+        collPtr->addDoc(t);
+        }
+    }
 }

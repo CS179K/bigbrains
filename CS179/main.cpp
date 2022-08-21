@@ -5,6 +5,9 @@
 #include <sstream>
 #include <fstream>
 #include <cstring>
+#include <thread>
+#include <chrono>
+#include <functional>
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
@@ -21,9 +24,10 @@ using std::filesystem::directory_iterator;
 
 int main(){
     vector<Database*> allDatabases;
+    vector<Database*> tempDatabases;
     InputHandler inputManager;
 
-    inputManager.readData(&allDatabases);
+    inputManager.readData(&tempDatabases);
     
     bool complete = false;
 	while (!complete)
@@ -68,12 +72,16 @@ int main(){
         else if (option == 4){ //search
             inputManager.searchQuery(&allDatabases);
         }
-        else if (option == 5){ //print
+        else if (option == 5){
+            inputManager.fillPaths();
+            inputManager.threadRead(&allDatabases);
+        }
+        else if (option == 6){ //print
             for (int i = 0; i < allDatabases.size(); i++){
                 allDatabases.at(i)->printAll();
             }
         }
-        else if (option == 6){
+        else if (option == 7){
             complete = true;
         }
     }
