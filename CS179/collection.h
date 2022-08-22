@@ -18,7 +18,7 @@ using namespace rapidjson;
 
 class Collection{
 private:
-    const std::string folder = "STORAGE\\";
+    const std::string folder = "STORAGE/";
     string name;
     string path;
     vector<Document*> documents;

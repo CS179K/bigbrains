@@ -65,38 +65,7 @@ int main(){
             }
         }
         else if (option == 4){ //search
-            string DBchoose, collChoose, docInput, keyName, objName, attName;
-            int count, type, matches=0, results=0;
-            cout << "Choose a database: " << endl;
-            for (int i = 0; i < allDatabases.size(); i++){
-                cout << i << ". " << allDatabases.at(i)->getName() << endl;
-                }
-
-            getline(cin, DBchoose);
-            if (!allDatabases.at(stoi(DBchoose))->getCollections().empty()){
-                cout << "Choose a collection: " << endl;
-                allDatabases.at(stoi(DBchoose))->print();
-                getline(cin, collChoose);
-                cout << "Enter a document. EX: { \"name\" : \"michael\" }" << endl;
-                getline(cin, docInput);
-            
-                //Converting user input to c string 
-                /*
-                const char *docToC = docInput.c_str();
-                Document *d, *d2;
-                
-            
-                d->Parse(docToC);
-                count = d->MemberCount(); 
-                */
-                Collection* coll = new Collection();
-                coll = allDatabases.at(stoi(DBchoose))->getCollection(stoi(collChoose));
-    
-                inputManager.searchQuery(&allDatabases, collChoose, docInput, DBchoose,coll);
-            }
-            else{
-                 cout << "No collections in this database. " << endl;
-        }
+            inputManager.searchQuery(&allDatabases);
         }
         else if (option == 5){ //print
             for (int i = 0; i < allDatabases.size(); i++){
