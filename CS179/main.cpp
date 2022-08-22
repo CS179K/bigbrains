@@ -17,11 +17,13 @@
 #include "inputHandler.h"
 #include "database.h"
 #include "rapidjson/ostreamwrapper.h"
+#include <chrono>
 using namespace std;
 using namespace rapidjson;
 using std::filesystem::directory_iterator;
+using namespace std::chrono;
 
-#define NUM_THREADS 5
+#define NUM_THREADS 3
 int globalFlag = 0; 
 int current_thread = 0; 
 void *searchQuery(vector<Database*>* DB, string collChoose,string docInput ,string DBchoose,Collection *coll)
@@ -33,8 +35,7 @@ void *searchQuery(vector<Database*>* DB, string collChoose,string docInput ,stri
     MAX = coll->getDocs().size(); 
     const char *docToC = docInput.c_str(); 
     d.Parse(docToC);
-    count = d.MemberCount(); 
-    cout << current_thread << endl; 
+    count = d.MemberCount();
     
     //Checking if the Collection is empty 
 
@@ -332,15 +333,19 @@ int main(){
                 coll = allDatabases.at(stoi(DBchoose))->getCollection(stoi(collChoose)); 
               
               
-                const int number_threads = 10; 
+                const int number_threads = 3; 
                 vector<thread> threads; 
             
                 
                 for(int i=0;i< number_threads;i++){
                     
+                    auto start = high_resolution_clock::now();
                     //threads[i]= thread(inputManager.searchQuery,&allDatabases, collChoose, docInput, DBchoose,coll,block_start,block_end);
                     threads.push_back(thread(searchQuery,&allDatabases, collChoose, docInput, DBchoose,coll)); 
-                    
+                    auto stop = high_resolution_clock::now();
+                    auto duration = duration_cast<microseconds>(stop - start);
+                    cout << "Time taken by thread "<< i + 1<<":  " << duration.count() << " microseconds" << endl;
+ 
                 }
                 for(int i=0;i< number_threads;i++){
                     threads[i].join(); 
