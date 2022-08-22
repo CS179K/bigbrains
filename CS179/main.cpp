@@ -27,7 +27,7 @@ int main(){
     vector<Database*> tempDatabases;
     InputHandler inputManager;
 
-    inputManager.readData(&tempDatabases);
+    inputManager.readData(&allDatabases);
     
     bool complete = false;
 	while (!complete)
@@ -76,12 +76,15 @@ int main(){
             inputManager.fillPaths();
             inputManager.threadRead(&allDatabases);
         }
-        else if (option == 6){ //print
+        else if (option == 6){
+            inputManager.searchQueryThreaded(&allDatabases);
+        }
+        else if (option == 7){ //print
             for (int i = 0; i < allDatabases.size(); i++){
                 allDatabases.at(i)->printAll();
             }
         }
-        else if (option == 7){
+        else if (option == 8){
             complete = true;
         }
     }
