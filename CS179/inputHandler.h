@@ -11,6 +11,7 @@
 #include <fstream>
 #include <filesystem>
 #include <vector>
+#include <pthread.h>
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
@@ -359,7 +360,7 @@ void InputHandler::searchQuery(vector<Database*>* DB, string collChoose,string d
     
     
     //Checking if the Collection is empty 
-        
+    
         for (int i = 0; i < coll->getDocs().size(); i++){
             bool objAttFlag = false;
             matches = 0;     

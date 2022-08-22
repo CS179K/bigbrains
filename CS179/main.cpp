@@ -11,7 +11,9 @@
 #include "rapidjson/filereadstream.h"
 #include "rapidjson/filewritestream.h"
 #include <cstdio>
+#include <thread>
 #include <filesystem>
+#include <math.h>
 #include "inputHandler.h"
 #include "database.h"
 #include "rapidjson/ostreamwrapper.h"
@@ -68,10 +70,12 @@ int main(){
         else if (option == 4){ //search
             string DBchoose, collChoose, docInput, keyName, objName, attName;
             int count, type, matches=0, results=0;
+            const int min_per_thread= 3;
             cout << "Choose a database: " << endl;
             for (int i = 0; i < allDatabases.size(); i++){
                 cout << i << ". " << allDatabases.at(i)->getName() << endl;
                 }
+
 
             getline(cin, DBchoose);
             if (!allDatabases.at(stoi(DBchoose))->getCollections().empty()){
@@ -81,18 +85,11 @@ int main(){
                 cout << "Enter a document. EX: { \"name\" : \"michael\" }" << endl;
                 getline(cin, docInput);
             
-                //Converting user input to c string 
-                /*
-                const char *docToC = docInput.c_str();
-                Document *d, *d2;
-                
-            
-                d->Parse(docToC);
-                count = d->MemberCount(); 
-                */
                 Collection* coll = new Collection();
                 coll = allDatabases.at(stoi(DBchoose))->getCollection(stoi(collChoose));
-    
+                const int length = coll->getDocs().size();
+                const int max_threads = ceil((length)/(float)min_per_thread); 
+
                 inputManager.searchQuery(&allDatabases, collChoose, docInput, DBchoose,coll);
             }
             else{
