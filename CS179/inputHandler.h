@@ -39,7 +39,7 @@ public:
     void removeDoc(vector<Database*>*);
     void updateDB(vector<Database*>*);
     void updateColl(vector<Database*>*);
-    void searchQuery(vector<Database*>* DB, string collChoose,string docInput ,string DBchoose,Collection *coll);
+    void *searchQuery(vector<Database*>* DB, string collChoose,string docInput ,string DBchoose,Collection *coll);
 };
 
 //displays main menu for user and returns chosen option 
@@ -349,7 +349,7 @@ Examples:
 { "driver" : {"name":"kevin", "age":21}}
 { "driver.age" : 21 }
 */
-void InputHandler::searchQuery(vector<Database*>* DB, string collChoose,string docInput ,string DBchoose,Collection *coll){
+void *InputHandler::searchQuery(vector<Database*>* DB, string collChoose,string docInput ,string DBchoose,Collection *coll){
     string  keyName, objName, attName;
     int count, type, matches=0, results=0;
     Document d, d2;
@@ -360,7 +360,7 @@ void InputHandler::searchQuery(vector<Database*>* DB, string collChoose,string d
     
     
     //Checking if the Collection is empty 
-    
+
         for (int i = 0; i < coll->getDocs().size(); i++){
             bool objAttFlag = false;
             matches = 0;     
